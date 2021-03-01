@@ -10,6 +10,7 @@ import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.apache.commons.io.IOUtils;
 import org.commonjava.util.sidecar.config.ProxyConfiguration;
 import org.commonjava.util.sidecar.interceptor.ExceptionHandler;
+import org.commonjava.util.sidecar.interceptor.MetricsHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +35,7 @@ import static org.commonjava.util.sidecar.services.ProxyConstants.EVENT_PROXY_CO
 
 @ApplicationScoped
 @ExceptionHandler
+@MetricsHandler
 public class ProxyService
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
