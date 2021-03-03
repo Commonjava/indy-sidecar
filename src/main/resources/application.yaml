@@ -1,14 +1,38 @@
-# Quarkus will choose application.yaml over application.properties.
+quarkus:
+  http:
+    port: 8080
+    read-timeout: 30m
+    limits:
+      max-body-size: 500M
+
+  # Logging (disable console on prod)
+  log:
+    level: INFO
+    category:
+      "org.commonjava.util.sidecar":
+        level: DEBUG
+    console:
+      level: DEBUG
+      enable: true
+    file:
+      enable: true
+      path: "log/sidecar.log"
+      level: DEBUG
+      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+      rotation:
+        max-backup-index: 5
+        max-file-size: 10M
+
 honeycomb:
-    enabled: false
-    dataset: test
-    write-key: test
-    base-sample-rate: 20
-    functions: |-
-      /api/content/.*|sidecar.content|20,
-      /api/folo/admin/.*|sidecar.folo.admin|1,
-      /api/folo/track/.*|sidecar.folo.content|1,
-      /api/admin/stores/.*|sidecar.repo.mgmt|1,
-      /api/promotion/.*|sidecar.promote|1,
-      /api/admin/promotion/.*|sidecar.promote.admin|1,
-      /api/promote/.*|sidecar.promote|1,
+  enabled: false
+  dataset: test
+  write-key: test
+  base-sample-rate: 20
+  functions: |-
+    /api/content/.*|sidecar.content|20,
+    /api/folo/admin/.*|sidecar.folo.admin|1,
+    /api/folo/track/.*|sidecar.folo.content|1,
+    /api/admin/stores/.*|sidecar.repo.mgmt|1,
+    /api/promotion/.*|sidecar.promote|1,
+    /api/admin/promotion/.*|sidecar.promote.admin|1,
+    /api/promote/.*|sidecar.promote|1,
