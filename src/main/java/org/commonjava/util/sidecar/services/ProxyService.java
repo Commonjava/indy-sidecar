@@ -77,7 +77,7 @@ public class ProxyService
     Classifier classifier;
 
     @Inject
-    TrackedContent trackedContent;
+    ReportService reportService;
 
     @PostConstruct
     void init()
@@ -133,11 +133,9 @@ public class ProxyService
 
     public Uni<Response> doGet( String path, HttpServerRequest request ) throws Exception
     {
-        String[] elements = path.split("/");
-
         TrackedContentEntry entry = new TrackedContentEntry(new TrackingKey(getBuildConfigId() == null ? "unknown":getBuildConfigId()),
-                                                            new StoreKey(elements[2],StoreType.valueOf(elements[3]),elements[4]),
-                                                            "GENERIC_PROXY",
+                                                            generateStoreKey( path ),
+                                                            "NATIVE",
                                                             "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path,
                                                             path,
                                                             (long) 0,"","","");
@@ -154,10 +152,8 @@ public class ProxyService
         byte[] bytes = IOUtils.toByteArray( is );
         Buffer buf = Buffer.buffer( bytes );
 
-        String[] elements = path.split("/");
-
         TrackedContentEntry entry = new TrackedContentEntry(new TrackingKey(getBuildConfigId() == null ? "unknown":getBuildConfigId()),
-                                                            new StoreKey(elements[2],StoreType.valueOf(elements[3]),elements[4]),
+                                                            generateStoreKey( path ),
                                                             "NATIVE",
                                                             "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path,
                                                             path,
@@ -176,7 +172,7 @@ public class ProxyService
             message = MessageDigest.getInstance("SHA-256");
             message.update( bytes );
             entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            trackedContent.appendDownload( entry );
+            reportService.appendUpload( entry );
         }
         catch ( NoSuchAlgorithmException e )
         {
@@ -207,10 +203,8 @@ public class ProxyService
         byte[] bytes = IOUtils.toByteArray( is );
         Buffer buf = Buffer.buffer( bytes );
 
-        String[] elements = path.split("/");
-
         TrackedContentEntry entry = new TrackedContentEntry(new TrackingKey(getBuildConfigId() == null ? "unknown":getBuildConfigId()),
-                                                            new StoreKey(elements[2],StoreType.valueOf(elements[3]),elements[4]),
+                                                            generateStoreKey( path ),
                                                             "NATIVE",
                                                             "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path,
                                                             path,
@@ -229,11 +223,11 @@ public class ProxyService
             message = MessageDigest.getInstance("SHA-256");
             message.update( bytes );
             entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            trackedContent.appendDownload( entry );
+            reportService.appendUpload( entry );
         }
         catch ( NoSuchAlgorithmException e )
         {
-            e.printStackTrace();
+            logger.warn( "Bytes hash calculation failed for" );
         }
 
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
@@ -348,7 +342,7 @@ public class ProxyService
                 message = MessageDigest.getInstance("SHA-256");
                 message.update( bytes );
                 entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                trackedContent.appendDownload( entry );
+                reportService.appendDownload( entry );
             }
             catch ( NoSuchAlgorithmException e )
             {
@@ -399,6 +393,11 @@ public class ProxyService
         String traceId = UUID.randomUUID().toString();
         request.headers().set( HEADER_PROXY_TRACE_ID, traceId );
         return action.apply( normalizePath( path ) );
+    }
+
+    private StoreKey generateStoreKey ( String path ){
+        String[] elements = path.split("/");
+        return new StoreKey(elements[2],StoreType.valueOf( elements[3] ),elements[4]);
     }
 
 }

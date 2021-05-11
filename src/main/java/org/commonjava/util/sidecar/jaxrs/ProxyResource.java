@@ -17,7 +17,6 @@ package org.commonjava.util.sidecar.jaxrs;
 
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.mutiny.core.eventbus.EventBus;
 import org.commonjava.util.sidecar.services.ProxyService;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
 import org.slf4j.Logger;

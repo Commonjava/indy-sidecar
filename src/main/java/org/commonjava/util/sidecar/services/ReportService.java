@@ -25,7 +25,8 @@ import org.commonjava.util.sidecar.model.TrackedContentEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
+import javax.annotation.PostConstruct;
+import javax.enterprise.context.ApplicationScoped;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -35,12 +36,26 @@ import static org.commonjava.util.sidecar.services.ProxyConstants.ARCHIVE_DECOMP
 import static org.commonjava.util.sidecar.util.SidecarUtils.getBuildConfigId;
 
 @RegisterForReflection
+@ApplicationScoped
 public class ReportService
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
-    @Inject
-    TrackedContent trackedContent;
+    public TrackedContent trackedContent;
+
+    @PostConstruct
+    void init(){
+        this.trackedContent = new TrackedContent();
+    }
+
+    public void appendUpload(TrackedContentEntry upload){
+        this.trackedContent.appendUpload(upload);
+    }
+
+    public void appendDownload(TrackedContentEntry download){
+        this.trackedContent.appendDownload(download);
+    }
+
 
     @ConsumeEvent(value = ARCHIVE_DECOMPRESS_COMPLETE)
     public void readReport(String path) throws FileNotFoundException
@@ -76,11 +91,9 @@ public class ReportService
                 }
             }
             logger.info( "Load complete" );
-            logger.info( trackedContent.toString() );
         }
         catch ( IOException e )
         {
-            e.printStackTrace();
             logger.warn( "Load build content history failed" );
             return false;
         }
@@ -157,9 +170,9 @@ public class ReportService
             }
             reader.endObject();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.warn( "load failed for tracking content entry" );
         }
-        entry.setAccessChannel( "GENERIC_PROXY" );
+        entry.setAccessChannel( "NATIVE" );
         return entry;
     }
 

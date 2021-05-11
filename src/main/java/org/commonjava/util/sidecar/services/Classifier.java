@@ -52,7 +52,7 @@ public class Classifier
         return action.apply( getWebClient( service ), service );
     }
 
-    public ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpServerRequest request ) throws Exception
+    private ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpServerRequest request ) throws Exception
     {
         HttpMethod method = request.method();
 
