@@ -133,18 +133,21 @@ public class ProxyService
 
     public Uni<Response> doGet( String path, HttpServerRequest request ) throws Exception
     {
-        TrackedContentEntry entry = new TrackedContentEntry(new TrackingKey(getBuildConfigId() == null ? "unknown":getBuildConfigId()),
-                                                            generateStoreKey( path ),
-                                                            "NATIVE",
-                                                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path,
-                                                            path,
-                                                            (long) 0,"","","");
+        if ( getBuildConfigId() != null && path.split( "/" )[2].equals( "maven" ) )
+        {
+            TrackedContentEntry entry = new TrackedContentEntry(
+                            new TrackingKey( getBuildConfigId() ),
+                            generateStoreKey( path ), "NATIVE",
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, (long) 0,
+                            "", "", "" );
+
+            return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
+                            client.get( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send(), entry ) ),
+                                     request );
+        }
 
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                client.get( p )
-                        .putHeaders( getHeaders( request ) )
-                        .timeout( timeout )
-                        .send() , entry ) ), request );
+                        client.head( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send() ) ), request );
     }
 
     public Uni<Response> doPost( String path, InputStream is, HttpServerRequest request ) throws Exception
@@ -152,31 +155,33 @@ public class ProxyService
         byte[] bytes = IOUtils.toByteArray( is );
         Buffer buf = Buffer.buffer( bytes );
 
-        TrackedContentEntry entry = new TrackedContentEntry(new TrackingKey(getBuildConfigId() == null ? "unknown":getBuildConfigId()),
-                                                            generateStoreKey( path ),
-                                                            "NATIVE",
-                                                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path,
-                                                            path,
-                                                            (long) 0,"","","");
+        if ( getBuildConfigId() != null && path.split( "/" )[2].equals( "maven" ) )
+        {
+            TrackedContentEntry entry = new TrackedContentEntry(
+                            new TrackingKey( getBuildConfigId() ),
+                            generateStoreKey( path ), "NATIVE",
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, (long) 0,
+                            "", "", "" );
 
-        entry.setSize( (long) bytes.length );
-        MessageDigest message;
-        try
-        {
-            message = MessageDigest.getInstance("MD5");
-            message.update( bytes );
-            entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            message = MessageDigest.getInstance("SHA-1");
-            message.update( bytes );
-            entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            message = MessageDigest.getInstance("SHA-256");
-            message.update( bytes );
-            entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            reportService.appendUpload( entry );
-        }
-        catch ( NoSuchAlgorithmException e )
-        {
-            e.printStackTrace();
+            entry.setSize( (long) bytes.length );
+            MessageDigest message;
+            try
+            {
+                message = MessageDigest.getInstance( "MD5" );
+                message.update( bytes );
+                entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                message = MessageDigest.getInstance( "SHA-1" );
+                message.update( bytes );
+                entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                message = MessageDigest.getInstance( "SHA-256" );
+                message.update( bytes );
+                entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                reportService.appendUpload( entry );
+            }
+            catch ( NoSuchAlgorithmException e )
+            {
+                logger.warn( "Bytes hash calculation failed for request" );
+            }
         }
 
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
@@ -203,31 +208,33 @@ public class ProxyService
         byte[] bytes = IOUtils.toByteArray( is );
         Buffer buf = Buffer.buffer( bytes );
 
-        TrackedContentEntry entry = new TrackedContentEntry(new TrackingKey(getBuildConfigId() == null ? "unknown":getBuildConfigId()),
-                                                            generateStoreKey( path ),
-                                                            "NATIVE",
-                                                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path,
-                                                            path,
-                                                            (long) 0,"","","");
+        if ( getBuildConfigId() != null && path.split( "/" )[2].equals( "maven" ) )
+        {
+            TrackedContentEntry entry = new TrackedContentEntry(
+                            new TrackingKey( getBuildConfigId() ),
+                            generateStoreKey( path ), "NATIVE",
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, (long) 0,
+                            "", "", "" );
 
-        entry.setSize( (long) bytes.length );
-        MessageDigest message;
-        try
-        {
-            message = MessageDigest.getInstance("MD5");
-            message.update( bytes );
-            entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            message = MessageDigest.getInstance("SHA-1");
-            message.update( bytes );
-            entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            message = MessageDigest.getInstance("SHA-256");
-            message.update( bytes );
-            entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-            reportService.appendUpload( entry );
-        }
-        catch ( NoSuchAlgorithmException e )
-        {
-            logger.warn( "Bytes hash calculation failed for" );
+            entry.setSize( (long) bytes.length );
+            MessageDigest message;
+            try
+            {
+                message = MessageDigest.getInstance( "MD5" );
+                message.update( bytes );
+                entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                message = MessageDigest.getInstance( "SHA-1" );
+                message.update( bytes );
+                entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                message = MessageDigest.getInstance( "SHA-256" );
+                message.update( bytes );
+                entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                reportService.appendUpload( entry );
+            }
+            catch ( NoSuchAlgorithmException e )
+            {
+                logger.warn( "Bytes hash calculation failed for request" );
+            }
         }
 
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
@@ -346,7 +353,7 @@ public class ProxyService
             }
             catch ( NoSuchAlgorithmException e )
             {
-                e.printStackTrace();
+                logger.warn( "Bytes hash calculation failed for request" );
             }
             builder.entity( bytes );
         }
