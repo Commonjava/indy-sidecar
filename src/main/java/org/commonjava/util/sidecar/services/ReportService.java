@@ -17,20 +17,21 @@ package org.commonjava.util.sidecar.services;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.vertx.ConsumeEvent;
-import com.google.gson.stream.JsonReader;
-import org.commonjava.util.sidecar.model.StoreKey;
-import org.commonjava.util.sidecar.model.StoreType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.commonjava.util.sidecar.model.TrackedContent;
 import org.commonjava.util.sidecar.model.TrackedContentEntry;
+import org.commonjava.util.sidecar.model.TrackingKey;
+import org.commonjava.util.sidecar.model.dto.HistoricalContentDTO;
+import org.commonjava.util.sidecar.model.dto.HistoricalEntryDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import javax.inject.Inject;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.commonjava.util.sidecar.services.ProxyConstants.ARCHIVE_DECOMPRESS_COMPLETE;
 import static org.commonjava.util.sidecar.util.SidecarUtils.getBuildConfigId;
@@ -41,7 +42,10 @@ public class ReportService
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
-    public TrackedContent trackedContent;
+    private TrackedContent trackedContent;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     @PostConstruct
     void init(){
@@ -58,123 +62,34 @@ public class ReportService
 
 
     @ConsumeEvent(value = ARCHIVE_DECOMPRESS_COMPLETE)
-    public void readReport(String path) throws FileNotFoundException
+    public void readReport(String path)
     {
-        String filePath = path + "/" + getBuildConfigId();
+        HistoricalContentDTO content;
+        Path filePath = Path.of(  path , getBuildConfigId() );
         logger.info( "Loading build content history:" + filePath );
-        BufferedReader reader = new BufferedReader( new FileReader( filePath ) );
-        load( reader );
-    }
-
-    private boolean load( BufferedReader input)
-    {
-        JsonReader reader = new JsonReader( input);
-        try (input)
+        try
         {
-            reader.beginObject();
-            while ( reader.hasNext() )
-            {
-                String jsonKey = reader.nextName();
-
-                if ( "downloads".equals( jsonKey ) )
+            String json = Files.readString( filePath );
+            content = objectMapper.readValue( json, HistoricalContentDTO.class );
+            if ( content == null ){
+                logger.error( "Failed to read historical content which is empty." );
+            }
+            else {
+                for ( HistoricalEntryDTO download:content.getDownloads() )
                 {
-                    reader.beginArray();
-                    while ( reader.hasNext() )
-                    {
-                        trackedContent.appendDownload( loadTrackedContentEntry( reader ) );
-                    }
-                    reader.endArray();
-                }
-                else
-                {
-                    reader.skipValue();
+                     this.trackedContent.appendDownload( new TrackedContentEntry( new TrackingKey(getBuildConfigId()),
+                                                                         download.getStoreKey(),
+                                                                         "NATIVE",
+                                                                         download.getOriginUrl(), download.getPath(), download.getSize(),
+                                                                         download.getMd5(), download.getSha1(), download.getSha256() ));
                 }
             }
-            logger.info( "Load complete" );
         }
-        catch ( IOException e )
+        catch ( IOException e)
         {
-            logger.warn( "Load build content history failed" );
-            return false;
+            logger.error( "convert file " + filePath + " to object failed" );
         }
-        return true;
+
     }
-
-    public TrackedContentEntry loadTrackedContentEntry(JsonReader reader){
-        TrackedContentEntry entry = new TrackedContentEntry();
-        try {
-            reader.beginObject();
-            while (reader.hasNext()) {
-                String jsonKey = reader.nextName();
-
-                switch (jsonKey) {
-                    case "path":
-                        entry.setPath(reader.nextString());
-                        break;
-                    case "originUrl":
-                        try
-                        {
-                            entry.setOriginUrl( reader.nextString() );
-                        }
-                        catch ( IllegalStateException e ){
-                            reader.skipValue();
-                            logger.debug( "originUrl has empty value" );
-                        }
-                        break;
-                    case "localUrl":
-                        if ( entry.getOriginUrl().equals( "" ) ){
-                            entry.setOriginUrl(reader.nextString());
-                        } else {
-                            reader.skipValue();
-                        }
-                        break;
-                    case "md5":
-                        entry.setMd5(reader.nextString());
-                        break;
-                    case "sha256":
-                        entry.setSha256(reader.nextString());
-                        break;
-                    case "sha1":
-                        entry.setSha1(reader.nextString());
-                        break;
-                    case "size":
-                        entry.setSize(reader.nextLong());
-                        break;
-                    case "storeKey":
-                        reader.beginObject();
-                        StoreKey storeKey = new StoreKey();
-                        while ( reader.hasNext() ){
-                            String key = reader.nextName();
-                            switch ( key ){
-                                case "packageType":
-                                    storeKey.setPackageType( reader.nextString() );
-                                    break;
-                                case "type":
-                                    storeKey.setType( StoreType.valueOf( reader.nextString() ) );
-                                    break;
-                                case "name":
-                                    storeKey.setName( reader.nextString() );
-                                    break;
-                                default:
-                                    reader.skipValue();
-                                    break;
-                            }
-                        }
-                        entry.setStoreKey( storeKey );
-                        reader.endObject();
-                        break;
-                    default:
-                        reader.skipValue();
-                        break;
-                }
-            }
-            reader.endObject();
-        } catch (IOException e) {
-            logger.warn( "load failed for tracking content entry" );
-        }
-        entry.setAccessChannel( "NATIVE" );
-        return entry;
-    }
-
 
 }
