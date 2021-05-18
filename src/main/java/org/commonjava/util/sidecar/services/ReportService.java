@@ -18,6 +18,8 @@ package org.commonjava.util.sidecar.services;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.vertx.ConsumeEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.commonjava.util.sidecar.model.AccessChannel;
+import org.commonjava.util.sidecar.model.StoreEffect;
 import org.commonjava.util.sidecar.model.TrackedContent;
 import org.commonjava.util.sidecar.model.TrackedContentEntry;
 import org.commonjava.util.sidecar.model.TrackingKey;
@@ -78,10 +80,10 @@ public class ReportService
                 for ( HistoricalEntryDTO download:content.getDownloads() )
                 {
                      this.trackedContent.appendDownload( new TrackedContentEntry( new TrackingKey(getBuildConfigId()),
-                                                                         download.getStoreKey(),
-                                                                         "NATIVE",
-                                                                         download.getOriginUrl(), download.getPath(), download.getSize(),
-                                                                         download.getMd5(), download.getSha1(), download.getSha256() ));
+                                                                                  download.getStoreKey(),
+                                                                                  AccessChannel.NATIVE,
+                                                                                  download.getOriginUrl(), download.getPath(), StoreEffect.DOWNLOAD, download.getSize(),
+                                                                                  download.getMd5(), download.getSha1(), download.getSha256() ));
                 }
             }
         }

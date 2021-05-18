@@ -12,7 +12,7 @@ import static org.commonjava.util.sidecar.model.pkg.PackageTypeConstants.PKG_TYP
 import static org.commonjava.util.sidecar.model.pkg.PackageTypeConstants.PKG_TYPE_MAVEN;
 
 public class TrackedContentEntry
-        implements Comparable<TrackedContentEntry>,Externalizable
+                implements Comparable<TrackedContentEntry>,Externalizable
 {
     private static final long serialVersionUID = 6469004486206600578L;
 
@@ -22,11 +22,13 @@ public class TrackedContentEntry
 
     private StoreKey storeKey;
 
-    private String accessChannel;
+    private AccessChannel accessChannel;
 
     private String path;
 
     private String originUrl;
+
+    private StoreEffect effect;
 
     private String md5;
 
@@ -40,22 +42,13 @@ public class TrackedContentEntry
 
     private Set<Long> timestamps;
 
-    public TrackedContentEntry() {
-        trackingKey = new TrackingKey();
-        storeKey = new StoreKey();
-        accessChannel = "";
-        path = "";
-        originUrl = "";
-        md5 = "";
-        sha256 = "";
-        sha1 = "";
-        size = (long) -1;
-        this.timestamps = new HashSet<>( Collections.singleton( System.currentTimeMillis() ) );
+    public TrackedContentEntry()
+    {
     }
 
     public TrackedContentEntry( final TrackingKey trackingKey, final StoreKey storeKey,
-                                final String accessChannel, final String originUrl, final String path,
-                                final Long size,
+                                final AccessChannel accessChannel, final String originUrl, final String path,
+                                final StoreEffect effect, final Long size,
                                 final String md5, final String sha1, final String sha256 )
     {
         this.trackingKey = trackingKey;
@@ -63,6 +56,7 @@ public class TrackedContentEntry
         this.accessChannel = accessChannel;
         this.path = path;
         this.originUrl = originUrl;
+        this.effect = effect;
         this.md5=md5;
         this.sha1=sha1;
         this.sha256=sha256;
@@ -95,7 +89,7 @@ public class TrackedContentEntry
         return storeKey;
     }
 
-    public String getAccessChannel()
+    public AccessChannel getAccessChannel()
     {
         return accessChannel;
     }
@@ -108,6 +102,11 @@ public class TrackedContentEntry
     public TrackingKey getTrackingKey()
     {
         return trackingKey;
+    }
+
+    public StoreEffect getEffect()
+    {
+        return effect;
     }
 
     public Long getSize()
@@ -135,12 +134,16 @@ public class TrackedContentEntry
         this.trackingKey = trackingKey;
     }
 
-    public void setAccessChannel(String accessChannel) {
+    public void setAccessChannel(AccessChannel accessChannel) {
         this.accessChannel = accessChannel;
     }
 
     public void setPath(String path) {
         this.path = path;
+    }
+
+    public void setEffect(StoreEffect effect) {
+        this.effect = effect;
     }
 
     public void setMd5(String md5) {
@@ -181,6 +184,10 @@ public class TrackedContentEntry
         {
             comp = path.compareTo( other.getPath() );
         }
+        if ( comp == 0 )
+        {
+            comp = effect.compareTo( other.getEffect() );
+        }
 
         return comp;
     }
@@ -194,6 +201,7 @@ public class TrackedContentEntry
         result = prime * result + ( ( path == null ) ? 0 : path.hashCode() );
         result = prime * result + ( ( storeKey == null ) ? 0 : storeKey.hashCode() );
         result = prime * result + ( ( accessChannel == null ) ? 0 : accessChannel.hashCode() );
+        result = prime * result + ( ( effect == null ) ? 0 : effect.hashCode() );
         return result;
     }
 
@@ -257,6 +265,17 @@ public class TrackedContentEntry
         {
             return false;
         }
+        if ( effect == null )
+        {
+            if ( other.effect != null )
+            {
+                return false;
+            }
+        }
+        else if ( !effect.equals( other.effect ) )
+        {
+            return false;
+        }
         return true;
     }
 
@@ -264,22 +283,23 @@ public class TrackedContentEntry
     public String toString()
     {
         return String.format(
-                "TrackedContentEntry [\n  trackingKey=%s\n  storeKey=%s\n  accessChannel=%s\n  path=%s\n  originUrl=%s\n  size=%s\n  md5=%s\n  sha1=%s\n  sha256=%s\nObject hashcode=%s\n]",
-                trackingKey, storeKey, accessChannel, path, originUrl, size, md5, sha1, sha256, super.hashCode() );
+                        "TrackedContentEntry [\n  trackingKey=%s\n  storeKey=%s\n  accessChannel=%s\n  path=%s\n  originUrl=%s\n  effect=%s\n  md5=%s\n  sha1=%s\n  sha256=%s\nObject hashcode=%s\n]",
+                        trackingKey, storeKey, accessChannel, path, originUrl, effect, md5, sha1, sha256, super.hashCode() );
     }
 
     @Override
     public void writeExternal( final ObjectOutput out )
-            throws IOException
+                    throws IOException
     {
         out.writeObject( Integer.toString( VERSION ) );
         out.writeObject( trackingKey );
         out.writeObject( storeKey.getPackageType() );
         out.writeObject( storeKey.getName() );
         out.writeObject( storeKey.getType().name() );
-        out.writeObject( accessChannel );
+        out.writeObject( accessChannel.name() );
         out.writeObject( path == null ? "" : path );
         out.writeObject( originUrl == null ? "" : originUrl );
+        out.writeObject( effect == null ? "" : effect.name() );
         out.writeObject( md5 == null ? "" : md5 );
         out.writeObject( sha1 == null ? "" : sha1 );
         out.writeObject( sha256 == null ? "" : sha256 );
@@ -290,7 +310,7 @@ public class TrackedContentEntry
 
     @Override
     public void readExternal( final ObjectInput in )
-            throws IOException, ClassNotFoundException
+                    throws IOException, ClassNotFoundException
     {
         // This is a little awkward. The original version didn't have a version constant, so it wasn't possible
         // to just read it from the data stream and use it to guide the deserialization process. Instead,
@@ -326,17 +346,17 @@ public class TrackedContentEntry
         if ( version > VERSION )
         {
             throw new IOException(
-                    "This class is of an older version: " + VERSION + " vs. the version read from the data stream: "
-                            + version + ". Cannot deserialize." );
+                            "This class is of an older version: " + VERSION + " vs. the version read from the data stream: "
+                                            + version + ". Cannot deserialize." );
         }
 
         final String storeKeyName = (String) in.readObject();
         final StoreType storeType = StoreType.get( (String) in.readObject() );
 
         final String accessChannelStr = (String) in.readObject();
-        accessChannel = "".equals( accessChannelStr ) ? null : accessChannelStr ;
+        accessChannel = "".equals( accessChannelStr ) ? null : AccessChannel.valueOf( accessChannelStr );
 
-        if ( version == 1 && accessChannel == "GENERIC_PROXY" )
+        if ( version == 1 && accessChannel == AccessChannel.GENERIC_PROXY )
         {
             packageType = PKG_TYPE_GENERIC_HTTP;
         }
@@ -348,6 +368,9 @@ public class TrackedContentEntry
 
         final String originUrlStr = (String) in.readObject();
         originUrl = "".equals( originUrlStr ) ? null : originUrlStr;
+
+        final String effectStr = (String) in.readObject();
+        effect = "".equals( effectStr ) ? null : StoreEffect.valueOf( effectStr );
 
         final String md5Str = (String) in.readObject();
         md5 = "".equals( md5Str ) ? null : md5Str;

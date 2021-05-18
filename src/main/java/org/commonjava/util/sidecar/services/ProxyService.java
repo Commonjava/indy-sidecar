@@ -137,8 +137,8 @@ public class ProxyService
         {
             TrackedContentEntry entry = new TrackedContentEntry(
                             new TrackingKey( getBuildConfigId() ),
-                            generateStoreKey( path ), "NATIVE",
-                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, (long) 0,
+                            generateStoreKey( path ), AccessChannel.NATIVE,
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.DOWNLOAD, (long) 0,
                             "", "", "" );
 
             return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
@@ -159,8 +159,8 @@ public class ProxyService
         {
             TrackedContentEntry entry = new TrackedContentEntry(
                             new TrackingKey( getBuildConfigId() ),
-                            generateStoreKey( path ), "NATIVE",
-                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, (long) 0,
+                            generateStoreKey( path ), AccessChannel.NATIVE,
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.UPLOAD, (long) 0,
                             "", "", "" );
 
             entry.setSize( (long) bytes.length );
@@ -212,8 +212,8 @@ public class ProxyService
         {
             TrackedContentEntry entry = new TrackedContentEntry(
                             new TrackingKey( getBuildConfigId() ),
-                            generateStoreKey( path ), "NATIVE",
-                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, (long) 0,
+                            generateStoreKey( path ), AccessChannel.NATIVE,
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.UPLOAD, (long) 0,
                             "", "", "" );
 
             entry.setSize( (long) bytes.length );
