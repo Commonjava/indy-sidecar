@@ -121,7 +121,7 @@ public class ProxyService
     public Uni<Response> doHead( String path, HttpServerRequest request ) throws Exception
     {
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                        client.head( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send() ) ), request );
+                        client.head( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send(), null ) ), request );
     }
 
     public Uni<Response> doGet( String packageType, String type, String name, String path, HttpServerRequest request )
@@ -133,21 +133,21 @@ public class ProxyService
 
     public Uni<Response> doGet( String path, HttpServerRequest request ) throws Exception
     {
+        TrackedContentEntry entry;
         if ( getBuildConfigId() != null && path.split( "/" )[2].equals( "maven" ) )
         {
-            TrackedContentEntry entry = new TrackedContentEntry(
+            entry = new TrackedContentEntry(
                             new TrackingKey( getBuildConfigId() ),
                             generateStoreKey( path ), AccessChannel.NATIVE,
                             "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.DOWNLOAD, (long) 0,
                             "", "", "" );
-
-            return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                            client.get( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send(), entry ) ),
-                                     request );
         }
-
+        else {
+            entry = null;
+        }
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                        client.head( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send() ) ), request );
+                        client.get( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).send(), entry ) ),
+                                 request );
     }
 
     public Uni<Response> doPost( String path, InputStream is, HttpServerRequest request ) throws Exception
@@ -185,7 +185,7 @@ public class ProxyService
         }
 
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                        client.post( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).sendBuffer( buf ) ) ),
+                        client.post( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).sendBuffer( buf ), null ) ),
                                  request );
     }
 
@@ -199,7 +199,7 @@ public class ProxyService
                                                                                                  .putHeaders( getHeaders(
                                                                                                                  request ) )
                                                                                                  .timeout( timeout )
-                                                                                                 .send() ) ), request );
+                                                                                                 .send(), null ) ), request );
     }
 
     public Uni<Response> doPut( String path, InputStream is, HttpServerRequest request ) throws Exception
@@ -238,7 +238,7 @@ public class ProxyService
         }
 
         return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                        client.put( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).sendBuffer( buf ) ) ),
+                        client.put( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).sendBuffer( buf ), null ) ),
                                  request );
     }
 
@@ -248,32 +248,13 @@ public class ProxyService
                 (client, service) -> wrapAsyncCall( client.delete( p )
                         .putHeaders( getHeaders( request ) )
                         .timeout( timeout )
-                        .send() ) ), request );
-    }
-
-    private Uni<Response> wrapAsyncCall( Uni<HttpResponse<Buffer>> asyncCall)
-    {
-        ProxyConfiguration.Retry retry = proxyConfiguration.getRetry();
-        Uni<Response> ret = asyncCall.onItem().transform( this::convertProxyResp );
-        if ( retry.count > 0 )
-        {
-            long backOff = retry.interval;
-            if ( retry.interval <= 0 )
-            {
-                backOff = DEFAULT_BACKOFF_MILLIS;
-            }
-            ret = ret.onFailure( t -> ( t instanceof IOException || t instanceof VertxException ) )
-                    .retry()
-                    .withBackOff( Duration.ofMillis( backOff ) )
-                    .atMost( retry.count );
-        }
-        return ret.onFailure().recoverWithItem( this::handleProxyException );
+                        .send(), null ) ), request );
     }
 
     private Uni<Response> wrapAsyncCall( Uni<HttpResponse<Buffer>> asyncCall, TrackedContentEntry entry)
     {
         ProxyConfiguration.Retry retry = proxyConfiguration.getRetry();
-        Uni<Response> ret = asyncCall.onItem().transform( a -> this.convertProxyResp( a, entry ) );
+        Uni<Response> ret = asyncCall.onItem().transform( buf -> convertProxyResp( buf, entry ) );
         if ( retry.count > 0 )
         {
             long backOff = retry.interval;
@@ -303,25 +284,6 @@ public class ProxyService
      * Read status and headers from proxy resp and set them to direct response.
      * @param resp proxy resp
      */
-    private Response convertProxyResp( HttpResponse<Buffer> resp )
-    {
-        logger.debug( "Proxy resp: {} {}", resp.statusCode(), resp.statusMessage() );
-        logger.trace( "Raw resp headers:\n{}", resp.headers() );
-        Response.ResponseBuilder builder = Response.status( resp.statusCode(), resp.statusMessage() );
-        resp.headers().forEach( header -> {
-            if ( respHeaderAllowed( header ) )
-            {
-                builder.header( header.getKey(), header.getValue() );
-            }
-        } );
-        if ( resp.body() != null )
-        {
-            byte[] bytes = resp.body().getBytes();
-            builder.entity( bytes );
-        }
-        return builder.build();
-    }
-
     private Response convertProxyResp( HttpResponse<Buffer> resp , TrackedContentEntry entry)
     {
         logger.debug( "Proxy resp: {} {}", resp.statusCode(), resp.statusMessage() );
@@ -336,24 +298,27 @@ public class ProxyService
         if ( resp.body() != null )
         {
             byte[] bytes = resp.body().getBytes();
-            entry.setSize( (long) bytes.length );
-            MessageDigest message;
-            try
+            if( entry != null)
             {
-                message = MessageDigest.getInstance("MD5");
-                message.update( bytes );
-                entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                message = MessageDigest.getInstance("SHA-1");
-                message.update( bytes );
-                entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                message = MessageDigest.getInstance("SHA-256");
-                message.update( bytes );
-                entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                reportService.appendDownload( entry );
-            }
-            catch ( NoSuchAlgorithmException e )
-            {
-                logger.warn( "Bytes hash calculation failed for request" );
+                entry.setSize( (long) bytes.length );
+                MessageDigest message;
+                try
+                {
+                    message = MessageDigest.getInstance( "MD5" );
+                    message.update( bytes );
+                    entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                    message = MessageDigest.getInstance( "SHA-1" );
+                    message.update( bytes );
+                    entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                    message = MessageDigest.getInstance( "SHA-256" );
+                    message.update( bytes );
+                    entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
+                    reportService.appendDownload( entry );
+                }
+                catch ( NoSuchAlgorithmException e )
+                {
+                    logger.warn( "Bytes hash calculation failed for request" );
+                }
             }
             builder.entity( bytes );
         }
