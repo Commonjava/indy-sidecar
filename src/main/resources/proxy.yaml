@@ -4,7 +4,7 @@ proxy:
     count: 3
     interval: 3000
   services:
-    - host: indy-infra-spmm-automation.apps.ocp4.prod.psi.redhat.com
+    - host: indy-master-devel.psi.redhat.com
       ssl: false
       port: 80
       path-pattern: /api/.+
