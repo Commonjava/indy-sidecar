@@ -139,7 +139,7 @@ public class ProxyService
             entry = new TrackedContentEntry(
                             new TrackingKey( getBuildConfigId() ),
                             generateStoreKey( path ), AccessChannel.NATIVE,
-                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.DOWNLOAD, (long) 0,
+                            "", "/" + path.replaceFirst( "^\\/?(\\w+\\/){5}","" ), StoreEffect.DOWNLOAD, (long) 0,
                             "", "", "" );
         }
         else {
@@ -301,6 +301,11 @@ public class ProxyService
             if( entry != null)
             {
                 entry.setSize( (long) bytes.length );
+                String[] headers = resp.getHeader( "indy-origin" ).split( ":" ) ;
+                entry.setOriginUrl( "http://" + proxyConfiguration.getServices().iterator().next().host
+                                                    + "/api/content/" + headers[0]+ "/" + headers[1]+ "/" + headers[2]
+                                                    + entry.getPath() );
+                logger.info( entry.getOriginUrl() );
                 MessageDigest message;
                 try
                 {
