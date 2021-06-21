@@ -81,5 +81,6 @@ pipeline {
         }
       }
     }
+    //TODO: archive decompress test & trace log export test
   }
 }

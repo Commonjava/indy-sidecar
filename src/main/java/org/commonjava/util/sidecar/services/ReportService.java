@@ -67,7 +67,7 @@ public class ReportService
     public void readReport(String path)
     {
         HistoricalContentDTO content;
-        Path filePath = Path.of(  path , getBuildConfigId() );
+        Path filePath = Path.of(  path , "" + getBuildConfigId() );
         logger.info( "Loading build content history:" + filePath );
         try
         {
