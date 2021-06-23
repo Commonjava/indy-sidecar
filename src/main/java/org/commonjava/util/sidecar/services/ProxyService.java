@@ -156,15 +156,25 @@ public class ProxyService
         byte[] bytes = IOUtils.toByteArray( is );
         Buffer buf = Buffer.buffer( bytes );
 
-        if ( getBuildConfigId() != null && path.split( "/" )[2].equals( "maven" ) )
+        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
+                        client.post( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).sendBuffer( buf ), null ) ),
+                                 request );
+    }
+
+    public Uni<Response> doPut( String packageType, String type, String name, String path, InputStream is, HttpServerRequest request )
+                    throws Exception
+    {
+        String contentPath = UrlUtils.buildUrl( CONTENT_REST_BASE_PATH, packageType, type, name, path );
+        byte[] bytes = IOUtils.toByteArray( is );
+        Buffer buf = Buffer.buffer( bytes );
+        if ( getBuildConfigId() != null)
         {
             TrackedContentEntry entry = new TrackedContentEntry(
-                            new TrackingKey( getBuildConfigId() ),
-                            generateStoreKey( path ), AccessChannel.NATIVE,
-                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.UPLOAD, (long) 0,
-                            "", "", "" );
+                    new TrackingKey( getBuildConfigId() ),
+                    generateStoreKey( contentPath ), AccessChannel.NATIVE,
+                    "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + contentPath, "/" + contentPath, StoreEffect.UPLOAD, (long) bytes.length,
+                    "", "", "" );
 
-            entry.setSize( (long) bytes.length );
             MessageDigest message;
             try
             {
@@ -185,22 +195,13 @@ public class ProxyService
             }
         }
 
-        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request, ( client, service ) -> wrapAsyncCall(
-                        client.post( p ).putHeaders( getHeaders( request ) ).timeout( timeout ).sendBuffer( buf ), null ) ),
-                                 request );
-    }
-
-    public Uni<Response> doPut( String packageType, String type, String name, String path, HttpServerRequest request )
-                    throws Exception
-    {
-        String contentPath = UrlUtils.buildUrl( CONTENT_REST_BASE_PATH, packageType, type, name, path );
         return normalizePathAnd( contentPath, p -> classifier.classifyAnd( p, request,
                                                                            ( client, service ) -> wrapAsyncCall(
                                                                                            client.put( p )
                                                                                                  .putHeaders( getHeaders(
                                                                                                                  request ) )
                                                                                                  .timeout( timeout )
-                                                                                                 .send(), null ) ), request );
+                                                                                                 .sendBuffer(buf), null ) ), request );
     }
 
     public Uni<Response> doPut( String path, InputStream is, HttpServerRequest request ) throws Exception
@@ -214,10 +215,9 @@ public class ProxyService
             TrackedContentEntry entry = new TrackedContentEntry(
                             new TrackingKey( getBuildConfigId() ),
                             generateStoreKey( path ), AccessChannel.NATIVE,
-                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.UPLOAD, (long) 0,
+                            "http://" + proxyConfiguration.getServices().iterator().next().host + "/" + path, path, StoreEffect.UPLOAD, (long) bytes.length,
                             "", "", "" );
 
-            entry.setSize( (long) bytes.length );
             MessageDigest message;
             try
             {
@@ -306,7 +306,6 @@ public class ProxyService
                 entry.setOriginUrl( "http://" + proxyConfiguration.getServices().iterator().next().host
                                                     + "/api/content/" + headers[0]+ "/" + headers[1]+ "/" + headers[2]
                                                     + entry.getPath() );
-                logger.info( entry.getOriginUrl() );
                 MessageDigest message;
                 try
                 {

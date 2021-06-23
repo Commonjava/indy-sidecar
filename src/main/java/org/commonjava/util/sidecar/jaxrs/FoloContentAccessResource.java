@@ -126,10 +126,10 @@ public class FoloContentAccessResource
                               @Parameter( in = PATH, schema = @Schema( enumeration = { "hosted", "group",
                                               "remote" } ), required = true ) @PathParam( "type" ) final String type,
                               @Parameter( in = PATH, required = true ) @PathParam( "name" ) final String name,
-                              @PathParam( "path" ) String path, final @Context HttpServerRequest request )
+                              @PathParam( "path" ) String path, InputStream is, final @Context HttpServerRequest request )
                     throws Exception
     {
         logger.debug( "Put proxy resource for folo request: {}", path );
-        return proxyService.doPut( PKG_TYPE_MAVEN, type, name, path, request );
+        return proxyService.doPut( PKG_TYPE_MAVEN, type, name, path, is, request );
     }
 }

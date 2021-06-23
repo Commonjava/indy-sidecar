@@ -19,7 +19,7 @@ public class PreSeedConstants
 {
     public static final String PKG_TYPE_MAVEN = "maven";
 
-    public static final String CONTENT_REST_BASE_PATH = "/api/content";
+    public static final String CONTENT_REST_BASE_PATH = "api/content";
 
     public static final String DEFAULT_REPO_PATH = System.getProperty( "user.home" ) + "/preSeedRepo";
 

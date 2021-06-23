@@ -46,6 +46,8 @@ public class ReportService
 
     private TrackedContent trackedContent;
 
+    private HistoricalContentDTO historicalContentDTO;
+
     @Inject
     ObjectMapper objectMapper;
 
@@ -56,10 +58,12 @@ public class ReportService
 
     public void appendUpload(TrackedContentEntry upload){
         this.trackedContent.appendUpload(upload);
+        logger.info(upload.toString());
     }
 
     public void appendDownload(TrackedContentEntry download){
         this.trackedContent.appendDownload(download);
+        logger.info(download.toString());
     }
 
 
@@ -72,11 +76,11 @@ public class ReportService
         try
         {
             String json = Files.readString( filePath );
-            content = objectMapper.readValue( json, HistoricalContentDTO.class );
-            if ( content == null ){
+            this.historicalContentDTO = objectMapper.readValue( json, HistoricalContentDTO.class );
+            if ( historicalContentDTO == null ){
                 logger.error( "Failed to read historical content which is empty." );
             }
-            else {
+            /*else {
                 for ( HistoricalEntryDTO download:content.getDownloads() )
                 {
                      this.trackedContent.appendDownload( new TrackedContentEntry( new TrackingKey(getBuildConfigId()),
@@ -85,7 +89,7 @@ public class ReportService
                                                                                   download.getOriginUrl(), download.getPath(), StoreEffect.DOWNLOAD, download.getSize(),
                                                                                   download.getMd5(), download.getSha1(), download.getSha256() ));
                 }
-            }
+            }*/
         }
         catch ( IOException e)
         {
