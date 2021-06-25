@@ -34,6 +34,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 
 import static org.commonjava.util.sidecar.services.PreSeedConstants.FOLO_BUILD;
 import static org.commonjava.util.sidecar.util.SidecarUtils.getBuildConfigId;
@@ -46,7 +47,7 @@ public class ReportService
 
     private TrackedContent trackedContent;
 
-    private HistoricalContentDTO historicalContentDTO;
+    private HashMap<String,HistoricalEntryDTO> historicalContentMap;
 
     @Inject
     ObjectMapper objectMapper;
@@ -54,6 +55,7 @@ public class ReportService
     @PostConstruct
     void init(){
         this.trackedContent = new TrackedContent();
+        this.historicalContentMap = new HashMap<>();
     }
 
     public void appendUpload(TrackedContentEntry upload){
@@ -66,9 +68,12 @@ public class ReportService
         logger.info(download.toString());
     }
 
+    public HistoricalEntryDTO findEntryInMemory(String path){
+        return this.historicalContentMap.get(path);
+    }
 
     @ConsumeEvent(value = FOLO_BUILD)
-    public void readReport(String path)
+    public void loadReport(String path)
     {
         HistoricalContentDTO content;
         Path filePath = Path.of(  path , "" + getBuildConfigId() );
@@ -76,20 +81,15 @@ public class ReportService
         try
         {
             String json = Files.readString( filePath );
-            this.historicalContentDTO = objectMapper.readValue( json, HistoricalContentDTO.class );
-            if ( historicalContentDTO == null ){
+            content = objectMapper.readValue( json, HistoricalContentDTO.class );
+            if ( content == null ){
                 logger.error( "Failed to read historical content which is empty." );
             }
-            /*else {
-                for ( HistoricalEntryDTO download:content.getDownloads() )
-                {
-                     this.trackedContent.appendDownload( new TrackedContentEntry( new TrackingKey(getBuildConfigId()),
-                                                                                  download.getStoreKey(),
-                                                                                  AccessChannel.NATIVE,
-                                                                                  download.getOriginUrl(), download.getPath(), StoreEffect.DOWNLOAD, download.getSize(),
-                                                                                  download.getMd5(), download.getSha1(), download.getSha256() ));
+            else {
+                for (HistoricalEntryDTO download:content.getDownloads()){
+                    this.historicalContentMap.put(download.getPath(),download);
                 }
-            }*/
+            }
         }
         catch ( IOException e)
         {
