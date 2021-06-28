@@ -31,12 +31,14 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 
 import static org.commonjava.util.sidecar.services.PreSeedConstants.FOLO_BUILD;
+import static org.commonjava.util.sidecar.services.PreSeedConstants.STARTUP_INIT;
 import static org.commonjava.util.sidecar.util.SidecarUtils.getBuildConfigId;
 
 @RegisterForReflection
@@ -72,18 +74,18 @@ public class ReportService
         return this.historicalContentMap.get(path);
     }
 
-    @ConsumeEvent(value = FOLO_BUILD)
+    @ConsumeEvent(value = STARTUP_INIT)
     public void loadReport(String path)
     {
         HistoricalContentDTO content;
-        Path filePath = Path.of(  path , "" + getBuildConfigId() );
+        Path filePath = Path.of(  path , File.separator, getBuildConfigId() );
         logger.info( "Loading build content history:" + filePath );
         try
         {
             String json = Files.readString( filePath );
             content = objectMapper.readValue( json, HistoricalContentDTO.class );
             if ( content == null ){
-                logger.error( "Failed to read historical content which is empty." );
+                logger.warn( "Failed to read historical content which is empty." );
             }
             else {
                 for (HistoricalEntryDTO download:content.getDownloads()){
@@ -96,6 +98,17 @@ public class ReportService
             logger.error( "convert file " + filePath + " to object failed" );
         }
 
+    }
+
+    @ConsumeEvent(value = FOLO_BUILD)
+    public void logFoloDownload(String path){
+        HistoricalEntryDTO entryDTO = historicalContentMap.get(path);
+        this.trackedContent.appendDownload(new TrackedContentEntry(
+                new TrackingKey(getBuildConfigId()),
+                entryDTO.getStoreKey(),
+                AccessChannel.NATIVE,
+                entryDTO.getOriginUrl(), entryDTO.getPath(), StoreEffect.DOWNLOAD, entryDTO.getSize(),
+                entryDTO.getMd5(), entryDTO.getSha1(), entryDTO.getSha256() ));
     }
 
 }
