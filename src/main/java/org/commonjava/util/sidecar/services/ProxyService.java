@@ -252,7 +252,7 @@ public class ProxyService
                         .send(), null ) ), request );
     }
 
-    private Uni<Response> wrapAsyncCall( Uni<HttpResponse<Buffer>> asyncCall, TrackedContentEntry entry)
+    public Uni<Response> wrapAsyncCall( Uni<HttpResponse<Buffer>> asyncCall, TrackedContentEntry entry)
     {
         ProxyConfiguration.Retry retry = proxyConfiguration.getRetry();
         Uni<Response> ret = asyncCall.onItem().transform( buf -> convertProxyResp( buf, entry ) );
@@ -376,7 +376,7 @@ public class ProxyService
         R apply( T t ) throws Exception;
     }
 
-    private Uni<Response> normalizePathAnd( String path, Function<String, Uni<Response>> action, HttpServerRequest request ) throws Exception
+    public Uni<Response> normalizePathAnd( String path, Function<String, Uni<Response>> action, HttpServerRequest request ) throws Exception
     {
         String traceId = UUID.randomUUID().toString();
         request.headers().set( HEADER_PROXY_TRACE_ID, traceId );

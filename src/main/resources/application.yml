@@ -4,6 +4,14 @@ quarkus:
     read-timeout: 30m
     limits:
       max-body-size: 500M
+  container-image:
+    builder: docker
+  vertx:
+    prefer-native-transport: true
+  native:
+    additional-build-args: |-
+      -H:ResourceConfigurationFiles=resources-config.json
+      -H:ReflectionConfigurationFiles=reflection-config.json
 
   # Logging (disable console on prod)
   log:

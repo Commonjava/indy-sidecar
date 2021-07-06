@@ -44,7 +44,7 @@ public class Classifier
     public <R> R classifyAnd( String path, HttpServerRequest request,
                               BiFunction<WebClient, ProxyConfiguration.ServiceConfig, R> action ) throws Exception
     {
-        ProxyConfiguration.ServiceConfig service = getServiceConfig( path, request );
+        ProxyConfiguration.ServiceConfig service = getServiceConfig( path, request.method() );
         if ( service == null )
         {
             throw new ServiceNotFoundException( "Service not found, path: " + path + ", method: " + request.method() );
@@ -52,10 +52,19 @@ public class Classifier
         return action.apply( getWebClient( service ), service );
     }
 
-    private ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpServerRequest request ) throws Exception
+    public <R> R classifyAnd( String path, HttpMethod method,
+                              BiFunction<WebClient, ProxyConfiguration.ServiceConfig, R> action ) throws Exception
     {
-        HttpMethod method = request.method();
+        ProxyConfiguration.ServiceConfig service = getServiceConfig( path, method );
+        if ( service == null )
+        {
+            throw new ServiceNotFoundException( "Service not found, path: " + path + ", method: " + method );
+        }
+        return action.apply( getWebClient( service ), service );
+    }
 
+    public ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpMethod method ) throws Exception
+    {
         ProxyConfiguration.ServiceConfig service = null;
 
         Set<ProxyConfiguration.ServiceConfig> services = serviceConfiguration.getServices();
@@ -73,7 +82,7 @@ public class Classifier
         return service;
     }
 
-    private WebClient getWebClient( ProxyConfiguration.ServiceConfig service ) throws Exception
+    public WebClient getWebClient( ProxyConfiguration.ServiceConfig service ) throws Exception
     {
         return clientMap.computeIfAbsent( service, k -> {
             WebClientOptions options = new WebClientOptions().setDefaultHost( k.host ).setDefaultPort( k.port );

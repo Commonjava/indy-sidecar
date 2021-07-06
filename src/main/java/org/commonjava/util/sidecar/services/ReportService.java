@@ -18,6 +18,9 @@ package org.commonjava.util.sidecar.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.vertx.ConsumeEvent;
+import io.smallrye.mutiny.Uni;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import org.commonjava.util.sidecar.model.AccessChannel;
 import org.commonjava.util.sidecar.model.StoreEffect;
 import org.commonjava.util.sidecar.model.TrackedContent;
@@ -31,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,18 +45,23 @@ import static org.commonjava.util.sidecar.services.PreSeedConstants.FOLO_BUILD;
 import static org.commonjava.util.sidecar.services.PreSeedConstants.STARTUP_INIT;
 import static org.commonjava.util.sidecar.util.SidecarUtils.getBuildConfigId;
 
-@RegisterForReflection
 @ApplicationScoped
 public class ReportService
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
-    private TrackedContent trackedContent;
+    public TrackedContent trackedContent;
 
     private HashMap<String,HistoricalEntryDTO> historicalContentMap;
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    Classifier classifier;
+
+    @Inject
+    ProxyService proxyService;
 
     @PostConstruct
     void init(){
@@ -70,38 +79,41 @@ public class ReportService
         logger.info(download.toString());
     }
 
-    public HistoricalEntryDTO findEntryInMemory(String path){
-        return this.historicalContentMap.get(path);
+    public TrackedContent getTrackedContent()
+    {
+        return trackedContent;
     }
 
     @ConsumeEvent(value = STARTUP_INIT)
     public void loadReport(String path)
     {
-        HistoricalContentDTO content;
-        Path filePath = Path.of(  path , File.separator, getBuildConfigId() );
-        logger.info( "Loading build content history:" + filePath );
-        try
-        {
-            String json = Files.readString( filePath );
-            content = objectMapper.readValue( json, HistoricalContentDTO.class );
-            if ( content == null ){
-                logger.warn( "Failed to read historical content which is empty." );
-            }
-            else {
-                for (HistoricalEntryDTO download:content.getDownloads()){
-                    this.historicalContentMap.put(download.getPath(),download);
+        if (getBuildConfigId() != null){
+            HistoricalContentDTO content;
+            Path filePath = Path.of(  path , File.separator, getBuildConfigId() );
+            logger.info( "Loading build content history:" + filePath );
+            try
+            {
+                String json = Files.readString( filePath );
+                content = objectMapper.readValue( json, HistoricalContentDTO.class );
+                if ( content == null ){
+                    logger.warn( "Failed to read historical content which is empty." );
+                }
+                else {
+                    for (HistoricalEntryDTO download:content.getDownloads()){
+                        this.historicalContentMap.put(download.getPath(),download);
+                    }
                 }
             }
+            catch ( IOException e)
+            {
+                logger.error( "convert file " + filePath + " to object failed" );
+            }
         }
-        catch ( IOException e)
-        {
-            logger.error( "convert file " + filePath + " to object failed" );
-        }
-
     }
 
     @ConsumeEvent(value = FOLO_BUILD)
-    public void logFoloDownload(String path){
+    public void logFoloDownload(String path)
+    {
         HistoricalEntryDTO entryDTO = historicalContentMap.get(path);
         this.trackedContent.appendDownload(new TrackedContentEntry(
                 new TrackingKey(getBuildConfigId()),
@@ -109,6 +121,20 @@ public class ReportService
                 AccessChannel.NATIVE,
                 entryDTO.getOriginUrl(), entryDTO.getPath(), StoreEffect.DOWNLOAD, entryDTO.getSize(),
                 entryDTO.getMd5(), entryDTO.getSha1(), entryDTO.getSha256() ));
+    }
+
+    public Uni<Response> exportReport() throws Exception
+    {
+        //Change here when we decide indy import API
+        String path = "/api/folo/admin/report/import";
+        return classifier.classifyAnd( path, HttpMethod.PUT, ( client, service ) ->
+                        proxyService.wrapAsyncCall(
+                                        client.put( path ).sendJsonObject( exportReportJson() ), null ));
+    }
+
+    public JsonObject exportReportJson()
+    {
+        return JsonObject.mapFrom( trackedContent );
     }
 
 }
