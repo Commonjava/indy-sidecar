@@ -40,8 +40,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.commonjava.util.sidecar.services.PreSeedConstants.DEFAULT_REPO_PATH;
-import static org.commonjava.util.sidecar.services.PreSeedConstants.STARTUP_INIT;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Startup
@@ -93,7 +91,6 @@ public class ProxyConfiguration
     {
         load( true );
         logger.info( "Proxy config, {}", this );
-        bus.publish( STARTUP_INIT, sidecarConfig.localRepository.orElse( DEFAULT_REPO_PATH ) );
     }
 
     private static final String PROXY_YAML = "proxy.yaml";

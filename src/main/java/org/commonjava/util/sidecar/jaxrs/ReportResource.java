@@ -53,7 +53,7 @@ public class ReportResource
     @Produces( APPLICATION_JSON )
     @DELETE
     public TrackedContent delete (){
-        reportService.trackedContent = new TrackedContent();
+        reportService.clearReport();
         return reportService.getTrackedContent();
     }
 }

@@ -16,10 +16,12 @@
 package org.commonjava.util.sidecar.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.runtime.Startup;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import org.commonjava.util.sidecar.config.SidecarConfig;
 import org.commonjava.util.sidecar.model.AccessChannel;
 import org.commonjava.util.sidecar.model.StoreEffect;
 import org.commonjava.util.sidecar.model.TrackedContent;
@@ -40,21 +42,25 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 
+import static org.commonjava.util.sidecar.services.PreSeedConstants.DEFAULT_REPO_PATH;
 import static org.commonjava.util.sidecar.services.PreSeedConstants.FOLO_BUILD;
-import static org.commonjava.util.sidecar.services.PreSeedConstants.STARTUP_INIT;
 import static org.commonjava.util.sidecar.util.SidecarUtils.getBuildConfigId;
 
+@Startup
 @ApplicationScoped
 public class ReportService
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
-    public TrackedContent trackedContent;
+    private TrackedContent trackedContent = new TrackedContent();
 
-    private HashMap<String,HistoricalEntryDTO> historicalContentMap;
+    private final HashMap<String,HistoricalEntryDTO> historicalContentMap = new HashMap<>();
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    SidecarConfig sidecarConfig;
 
     @Inject
     Classifier classifier;
@@ -64,8 +70,7 @@ public class ReportService
 
     @PostConstruct
     void init(){
-        this.trackedContent = new TrackedContent();
-        this.historicalContentMap = new HashMap<>();
+        loadReport( sidecarConfig.localRepository.orElse( DEFAULT_REPO_PATH ) );
     }
 
     public void appendUpload(TrackedContentEntry upload){
@@ -81,8 +86,7 @@ public class ReportService
         return trackedContent;
     }
 
-    @ConsumeEvent(value = STARTUP_INIT)
-    public void loadReport(String path)
+    private void loadReport(String path)
     {
         if (getBuildConfigId() != null){
             HistoricalContentDTO content;
@@ -109,7 +113,7 @@ public class ReportService
     }
 
     @ConsumeEvent(value = FOLO_BUILD)
-    public void logFoloDownload(String path)
+    private void logFoloDownload(String path)
     {
         HistoricalEntryDTO entryDTO = historicalContentMap.get(path);
         this.trackedContent.appendDownload(new TrackedContentEntry(
@@ -124,14 +128,19 @@ public class ReportService
     {
         //Change here when we decide indy import API
         String path = "/api/folo/admin/report/import";
+
         return classifier.classifyAnd( path, HttpMethod.PUT, ( client, service ) ->
                         proxyService.wrapAsyncCall(
                                         client.put( path ).sendJsonObject( exportReportJson() ), null ));
     }
 
-    public JsonObject exportReportJson()
+    private JsonObject exportReportJson()
     {
         return JsonObject.mapFrom( trackedContent );
+    }
+
+    public void clearReport(){
+        trackedContent = new TrackedContent();
     }
 
 }
