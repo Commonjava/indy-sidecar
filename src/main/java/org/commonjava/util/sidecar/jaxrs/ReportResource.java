@@ -18,7 +18,7 @@ import javax.ws.rs.core.Response;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 
-//Change path when Newcastle finish signal API is decided
+//Change path when Newcastle build complete signal API is integrated
 @Path( "/api/folo/track/{id}/record" )
 public class ReportResource
 {
@@ -30,7 +30,6 @@ public class ReportResource
     @Operation( description = "Retrieve tracking report content from memory" )
     @APIResponse( responseCode = "200", description = "Tracking report content" )
     @APIResponse( responseCode = "500", description = "Tracking report generation failed" )
-    @Path( "{path: (.*)}" )
     @Produces( APPLICATION_JSON )
     @GET
     public TrackedContent get (){
@@ -51,7 +50,6 @@ public class ReportResource
     @Operation( description = "Delete tracking report content from memory" )
     @APIResponse( responseCode = "200", description = "Tracking report deleted" )
     @APIResponse( responseCode = "404", description = "No tracking report found" )
-    @Path( "{path: (.*)}" )
     @Produces( APPLICATION_JSON )
     @DELETE
     public TrackedContent delete (){

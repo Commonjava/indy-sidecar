@@ -16,7 +16,6 @@
 package org.commonjava.util.sidecar.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
@@ -71,12 +70,10 @@ public class ReportService
 
     public void appendUpload(TrackedContentEntry upload){
         this.trackedContent.appendUpload(upload);
-        logger.info(upload.toString());
     }
 
     public void appendDownload(TrackedContentEntry download){
         this.trackedContent.appendDownload(download);
-        logger.info(download.toString());
     }
 
     public TrackedContent getTrackedContent()

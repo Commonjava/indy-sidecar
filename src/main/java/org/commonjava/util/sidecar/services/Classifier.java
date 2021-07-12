@@ -63,7 +63,7 @@ public class Classifier
         return action.apply( getWebClient( service ), service );
     }
 
-    public ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpMethod method ) throws Exception
+    private ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpMethod method ) throws Exception
     {
         ProxyConfiguration.ServiceConfig service = null;
 
@@ -82,7 +82,7 @@ public class Classifier
         return service;
     }
 
-    public WebClient getWebClient( ProxyConfiguration.ServiceConfig service ) throws Exception
+    private WebClient getWebClient( ProxyConfiguration.ServiceConfig service ) throws Exception
     {
         return clientMap.computeIfAbsent( service, k -> {
             WebClientOptions options = new WebClientOptions().setDefaultHost( k.host ).setDefaultPort( k.port );

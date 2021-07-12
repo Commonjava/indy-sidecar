@@ -61,9 +61,6 @@ public class FoloContentAccessResource
     ProxyService proxyService;
 
     @Inject
-    SidecarConfig sidecarConfig;
-
-    @Inject
     ArchiveRetrieveService archiveService;
 
     @Operation( description = "Retrieve Maven artifact content from historical archive or proxy" )
