@@ -31,6 +31,7 @@ import org.commonjava.util.sidecar.model.StoreKey;
 import org.commonjava.util.sidecar.model.StoreType;
 import org.commonjava.util.sidecar.model.TrackedContentEntry;
 import org.commonjava.util.sidecar.model.TrackingKey;
+import org.commonjava.util.sidecar.util.BufferStreamingOutput;
 import org.commonjava.util.sidecar.util.UrlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -300,34 +302,11 @@ public class ProxyService
         } );
         if ( resp.body() != null )
         {
-            byte[] bytes = resp.body().getBytes();
-            if ( entry != null )
-            {
-                entry.setSize( (long) bytes.length );
-                String[] headers = resp.getHeader( "indy-origin" ).split( ":" );
-                entry.setOriginUrl(
-                                "http://" + proxyConfiguration.getServices().iterator().next().host + "/api/content/"
-                                                + headers[0] + "/" + headers[1] + "/" + headers[2] + entry.getPath() );
-                MessageDigest message;
-                try
-                {
-                    message = MessageDigest.getInstance( "MD5" );
-                    message.update( bytes );
-                    entry.setMd5( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                    message = MessageDigest.getInstance( "SHA-1" );
-                    message.update( bytes );
-                    entry.setSha1( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                    message = MessageDigest.getInstance( "SHA-256" );
-                    message.update( bytes );
-                    entry.setSha256( DatatypeConverter.printHexBinary( message.digest() ).toLowerCase() );
-                    reportService.appendDownload( entry );
-                }
-                catch ( NoSuchAlgorithmException e )
-                {
-                    logger.warn( "Bytes hash calculation failed for request" );
-                }
-            }
-            builder.entity( bytes );
+            String indyOrigin = resp.getHeader( "indy-origin" );
+            // FIXME: We need to account for HTTPS here...probably in the configuration itself.
+            String serviceOrigin = "http://" + proxyConfiguration.getServices().iterator().next().host;
+            StreamingOutput so = new BufferStreamingOutput( resp, entry, serviceOrigin, indyOrigin, reportService );
+            builder.entity( so );
         }
         return builder.build();
     }
