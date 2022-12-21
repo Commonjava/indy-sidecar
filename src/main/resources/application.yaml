@@ -10,10 +10,6 @@ quarkus:
     read-timeout: 30m
     limits:
       max-body-size: 500M
-  resteasy:
-    gizp:
-      enabled: true
-      max-input: 1024M
 
   opentelemetry:
     enabled: true
