@@ -1,0 +1,11 @@
+proxy:
+  read-timeout: 30m
+  retry:
+    count: 3
+    interval: 3000
+    maxBackOff: 15000
+  services:
+    - host: indy-gateway-master-indy-preview.apps.ocp-c1.prod.psi.redhat.com
+      ssl: true
+      port: 443
+      path-pattern: /api/.+
