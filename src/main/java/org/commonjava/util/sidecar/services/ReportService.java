@@ -16,6 +16,7 @@
 package org.commonjava.util.sidecar.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.Startup;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.json.JsonObject;
@@ -101,6 +102,7 @@ public class ReportService
 
     @ConsumeEvent( value = FOLO_BUILD )
     public void storeTrackedDownload( JsonObject message )
+            throws Exception
     {
         String trackingPath = message.getString( TRACKING_PATH );
         String trackingId = message.getString( TRACKING_ID );
@@ -119,12 +121,31 @@ public class ReportService
             return;
         }
         String originalUrl = entryDTO.getOriginUrl() == null ? "" : entryDTO.getOriginUrl();
-        Response response = trackingService.recordArtificat( trackingId, trackingPath, storeKey.getPackageType(),
-                                                             storeKey.getType().name(), storeKey.getName(), originalUrl,
-                                                             entryDTO.getSize(), entryDTO.getMd5(), entryDTO.getSha1(),
-                                                             entryDTO.getSha256() );
-        logger.debug( "Finished consuming folo record seal event for path:{}, trackingId:{}, rep code: {}, body: {}",
-                      trackingPath, trackingId, response.getStatus(), response.getStatusInfo().getReasonPhrase() );
+        boolean exception = false;
+        try
+        {
+            Response response = trackingService.recordArtifact( trackingId, trackingPath, storeKey.getPackageType(),
+                                                                 storeKey.getType().name(), storeKey.getName(),
+                                                                 originalUrl, entryDTO.getSize(), entryDTO.getMd5(),
+                                                                 entryDTO.getSha1(), entryDTO.getSha256() );
+            logger.debug(
+                    "Finished consuming folo record seal event for path:{}, trackingId:{}, rep code: {}, body: {}",
+                    trackingPath, trackingId, response.getStatus(), response.getStatusInfo().getReasonPhrase() );
+        }
+        catch ( Exception e )
+        {
+            exception = true;
+            throw new Exception( "Sidecar failed to record folo for historical entry, will stop.", e );
+        }
+        finally
+        {
+            if ( exception )
+            {
+                // exit with default code -1
+                Quarkus.asyncExit();
+            }
+        }
+
     }
 
 }
