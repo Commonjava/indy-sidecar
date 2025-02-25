@@ -22,6 +22,7 @@ import io.vertx.mutiny.core.eventbus.EventBus;
 import org.apache.commons.io.FileUtils;
 import org.commonjava.util.sidecar.services.ArchiveRetrieveService;
 import org.commonjava.util.sidecar.services.ProxyService;
+import org.commonjava.util.sidecar.services.ReportService;
 import org.commonjava.util.sidecar.util.TransferStreamingOutput;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -65,6 +66,9 @@ public class FoloContentAccessResource
     @Inject
     ArchiveRetrieveService archiveService;
 
+    @Inject
+    ReportService reportService;
+
     @Operation( description = "Retrieve Maven/NPM artifact content from historical archive or proxy" )
     @APIResponse( responseCode = "200", description = "Content stream" )
     @APIResponse( responseCode = "404", description = "Content is not available" )
@@ -86,7 +90,7 @@ public class FoloContentAccessResource
         }
 
         Optional<File> download = archiveService.getLocally( path );
-        if ( download.isPresent() && download.get().isFile() )
+        if ( download.isPresent() && download.get().isFile() && reportService.checkValidHistoricalEntryMeta( path ) )
         {
             Uni<Boolean> checksumValidation =
                     proxyService.validateChecksum( id, packageType, type, name, path, request );

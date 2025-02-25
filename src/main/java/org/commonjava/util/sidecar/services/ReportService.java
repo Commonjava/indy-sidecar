@@ -109,17 +109,7 @@ public class ReportService
         logger.debug( "Consuming folo record seal event for path:{}, trackingId:{}", trackingPath, trackingId );
 
         HistoricalEntryDTO entryDTO = historicalContentMap.get( trackingPath );
-        if ( null == entryDTO )
-        {
-            logger.warn( "No historical entry meta is found for tracking {}.", trackingPath );
-            return;
-        }
         StoreKey storeKey = entryDTO.getStoreKey();
-        if ( null == storeKey )
-        {
-            logger.warn( "No StoreKey is found for tracking {} historical entry.", trackingPath );
-            return;
-        }
         String originalUrl = entryDTO.getOriginUrl() == null ? "" : entryDTO.getOriginUrl();
         boolean exception = false;
         try
@@ -150,5 +140,22 @@ public class ReportService
     public HashMap<String, HistoricalEntryDTO> getHistoricalContentMap()
     {
         return historicalContentMap;
+    }
+
+    public boolean checkValidHistoricalEntryMeta( String trackingPath )
+    {
+        HistoricalEntryDTO entryDTO = historicalContentMap.get( trackingPath );
+        if ( entryDTO == null )
+        {
+            logger.warn( "Check no matched historical entry meta is found for tracking path: {}.", trackingPath );
+            return false;
+        }
+        StoreKey storeKey = entryDTO.getStoreKey();
+        if ( storeKey == null )
+        {
+            logger.warn( "Check no valid historical StoreKey is found for tracking path: {}.", trackingPath );
+            return false;
+        }
+        return true;
     }
 }
