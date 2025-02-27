@@ -15,6 +15,7 @@
  */
 package org.commonjava.util.sidecar.services;
 
+import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -36,6 +37,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static io.vertx.core.http.HttpMethod.HEAD;
@@ -137,42 +139,40 @@ public class ProxyService
                                           HttpServerRequest request )
     {
         Map<String, String> localChecksums = getChecksums( path );
-        Uni<Boolean> resultUni = Uni.createFrom().item( false );
-
-        for ( String checksumType : localChecksums.keySet() )
-        {
+        Multi<Boolean> multiResults = Multi.createFrom().iterable( localChecksums.keySet() ).flatMap( checksumType -> {
             String localChecksum = localChecksums.get( checksumType );
             if ( localChecksum == null )
             {
-                continue;
+                return Multi.createFrom().item( false );
             }
             String checksumUrl = path + "." + checksumType;
-            resultUni = resultUni.onItem().call( () -> {
-                try
-                {
-                    return downloadAndCompareChecksum( trackingId, packageType, type, name, checksumUrl, localChecksum,
-                                                       request ).onItem().invoke( result -> {
-                        if ( result != null && result )
-                        {
-                            // This is just used to skip loop to avoid unnecessary checksum download
-                            logger.debug(
-                                    "Found the valid checksum compare result, stopping further checks, remote path {}",
-                                    checksumUrl );
-                            throw new FoundValidChecksumException();
-                        }
-                    } );
-                }
-                catch ( Exception e )
-                {
-                    logger.error( "Checksum download compare error for path: {}", checksumUrl, e );
-                }
-                return null;
-            } );
-        }
-        return resultUni.onFailure().recoverWithItem( false ).onItem().transform( result -> {
-            // If catch FoundValidChecksumException，return true
-            return true;
-        } ); // If no valid checksum compare result found, return false
+            try
+            {
+                return downloadAndCompareChecksum( trackingId, packageType, type, name, checksumUrl, localChecksum,
+                                                   request ).onItem().invoke( result -> {
+                    if ( result != null && result )
+                    {
+                        // This is just used to skip loop to avoid unnecessary checksum download
+                        logger.debug(
+                                "Found the valid checksum compare result, stopping further checks, remote path {}",
+                                checksumUrl );
+                        throw new FoundValidChecksumException();
+                    }
+                } ).onFailure().recoverWithItem( true ).toMulti();
+            }
+            catch ( Exception e )
+            {
+                logger.error( "Checksum download compare error for path: {}", checksumUrl, e );
+            }
+            return Multi.createFrom().item( false );
+        } );
+
+        Uni<List<Boolean>> collectedResults = multiResults.collect().asList();
+        return collectedResults.onItem().transform( results -> {
+            boolean finalResult = results.stream().anyMatch( res -> res );
+            logger.debug( "FinalResult:{}", finalResult );
+            return finalResult;
+        } );
     }
 
     private Uni<Boolean> downloadAndCompareChecksum( String trackingId, String packageType, String type, String name,
