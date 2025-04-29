@@ -137,11 +137,6 @@ public class ReportService
         }
     }
 
-    public HashMap<String, HistoricalEntryDTO> getHistoricalContentMap()
-    {
-        return historicalContentMap;
-    }
-
     public boolean checkValidHistoricalEntryMeta( String trackingPath )
     {
         HistoricalEntryDTO entryDTO = historicalContentMap.get( trackingPath );
