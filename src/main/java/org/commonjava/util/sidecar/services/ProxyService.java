@@ -15,14 +15,12 @@
  */
 package org.commonjava.util.sidecar.services;
 
-import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import kotlin.Pair;
 import org.commonjava.util.sidecar.config.ProxyConfiguration;
 import org.commonjava.util.sidecar.interceptor.ExceptionHandler;
-import org.commonjava.util.sidecar.model.dto.HistoricalEntryDTO;
 import org.commonjava.util.sidecar.util.OtelAdapter;
 import org.commonjava.util.sidecar.util.ProxyStreamingOutput;
 import org.commonjava.util.sidecar.util.UrlUtils;
@@ -33,12 +31,7 @@ import org.slf4j.LoggerFactory;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 import static io.vertx.core.http.HttpMethod.HEAD;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
@@ -135,76 +128,6 @@ public class ProxyService
         return ret.onFailure().recoverWithItem( this::handleProxyException );
     }
 
-    public Uni<Boolean> validateChecksum( String trackingId, String packageType, String type, String name, String path,
-                                          HttpServerRequest request )
-    {
-        Map<String, String> localChecksums = getChecksums( path );
-        Multi<Boolean> multiResults = Multi.createFrom().iterable( localChecksums.keySet() ).flatMap( checksumType -> {
-            String localChecksum = localChecksums.get( checksumType );
-            if ( localChecksum == null )
-            {
-                return Multi.createFrom().item( false );
-            }
-            String checksumUrl = path + "." + checksumType;
-            try
-            {
-                return downloadAndCompareChecksum( trackingId, packageType, type, name, checksumUrl, localChecksum,
-                                                   request ).onItem().invoke( result -> {
-                    if ( result != null && result )
-                    {
-                        // This is just used to skip loop to avoid unnecessary checksum download
-                        logger.debug(
-                                "Found the valid checksum compare result, stopping further checks, remote path {}",
-                                checksumUrl );
-                        throw new FoundValidChecksumException();
-                    }
-                } ).onFailure().recoverWithItem( true ).toMulti();
-            }
-            catch ( Exception e )
-            {
-                logger.error( "Checksum download compare error for path: {}", checksumUrl, e );
-            }
-            return Multi.createFrom().item( false );
-        } );
-
-        Uni<List<Boolean>> collectedResults = multiResults.collect().asList();
-        return collectedResults.onItem().transform( results -> {
-            boolean finalResult = results.stream().anyMatch( res -> res );
-            logger.debug( "FinalResult:{}", finalResult );
-            return finalResult;
-        } );
-    }
-
-    private Uni<Boolean> downloadAndCompareChecksum( String trackingId, String packageType, String type, String name,
-                                                     String checksumUrl, String localChecksum,
-                                                     HttpServerRequest request )
-            throws Exception
-    {
-        return doGet( trackingId, packageType, type, name, checksumUrl, request ).onItem().transform( response -> {
-            if ( response.getStatus() == Response.Status.OK.getStatusCode() )
-            {
-                ProxyStreamingOutput streamingOutput = (ProxyStreamingOutput) response.getEntity();
-                try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream())
-                {
-                    streamingOutput.write( outputStream );
-                    String remoteChecksum = outputStream.toString();
-                    return localChecksum.equals( remoteChecksum );
-                }
-                catch ( IOException e )
-                {
-                    logger.error( "Error to read remote checksum, path:{}.", checksumUrl, e );
-                    return null;
-                }
-            }
-            else
-            {
-                logger.error( "Failed to download remote checksum for {}: HTTP {}.", checksumUrl,
-                              response.getStatus() );
-                return null;
-            }
-        } );
-    }
-
     /**
      * Send status 500 with error message body.
      * @param t error
@@ -245,45 +168,4 @@ public class ProxyService
         return !FORBIDDEN_HEADERS.contains( key.toLowerCase() );
     }
 
-    private Map<String, String> getChecksums( String path )
-    {
-        Map<String, String> result = new LinkedHashMap<>();
-        HistoricalEntryDTO entryDTO = reportService.getHistoricalContentMap().get( path );
-        if ( entryDTO != null )
-        {
-            result.put( ChecksumType.SHA1.getValue(), entryDTO.getSha1() );
-            result.put( ChecksumType.SHA256.getValue(), entryDTO.getSha256() );
-            result.put( ChecksumType.MD5.getValue(), entryDTO.getMd5() );
-        }
-
-        return result;
-    }
-
-    enum ChecksumType
-    {
-        SHA1( "sha1" ),
-        SHA256( "sha256" ),
-        MD5( "md5" );
-
-        private final String value;
-
-        ChecksumType( String value )
-        {
-            this.value = value;
-        }
-
-        public String getValue()
-        {
-            return value;
-        }
-    }
-
-    class FoundValidChecksumException
-            extends RuntimeException
-    {
-        public FoundValidChecksumException()
-        {
-            super( "Found a valid checksum, stopping further checks." );
-        }
-    }
 }
