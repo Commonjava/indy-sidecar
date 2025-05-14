@@ -25,14 +25,14 @@
   </parent>
   <groupId>org.commonjava.util</groupId>
   <artifactId>sidecar</artifactId>
-  <version>2.0.5-SNAPSHOT</version>
+  <version>2.0.5</version>
   <name>Sidecar :: Project Root</name>
   <inceptionYear>2011-2022</inceptionYear>
   <scm>
     <connection>scm:git:https://github.com/commonjava/indy-sidecar</connection>
     <developerConnection>scm:git:https://github.com/commonjava/indy-sidecar</developerConnection>
     <url>https://github.com/Commonjava/indy-sidecar</url>
-    <tag>HEAD</tag>
+    <tag>sidecar-2.0.5</tag>
   </scm>
   <properties>
     <javaVersion>11</javaVersion>
