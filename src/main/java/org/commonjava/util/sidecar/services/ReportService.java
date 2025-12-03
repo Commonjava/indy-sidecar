@@ -29,10 +29,10 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.ws.rs.core.Response;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -67,7 +67,7 @@ public class ReportService
     @PostConstruct
     void init()
     {
-        loadReport( sidecarConfig.localRepository.orElse( DEFAULT_REPO_PATH ) );
+        loadReport( sidecarConfig.localRepository().orElse( DEFAULT_REPO_PATH ) );
     }
 
     private void loadReport( String path )

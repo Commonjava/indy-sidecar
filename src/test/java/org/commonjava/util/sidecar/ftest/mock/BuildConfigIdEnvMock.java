@@ -17,8 +17,8 @@ package org.commonjava.util.sidecar.ftest.mock;
 
 import org.commonjava.util.sidecar.services.ArchiveRetrieveService;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Alternative;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Alternative;
 
 @ApplicationScoped
 @Alternative

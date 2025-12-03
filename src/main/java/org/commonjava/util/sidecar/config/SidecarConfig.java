@@ -15,17 +15,14 @@
  */
 package org.commonjava.util.sidecar.config;
 
-import io.quarkus.arc.config.ConfigProperties;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+import io.smallrye.config.ConfigMapping;
 
 import java.util.Optional;
 
-@ConfigProperties( prefix = "sidecar" )
-public class SidecarConfig
+@ConfigMapping( prefix = "sidecar" )
+public interface SidecarConfig
 {
-    @ConfigProperty( name = "archive-api" )
-    public Optional<String> archiveApi;
+    Optional<String> archiveApi();
 
-    @ConfigProperty( name = "local-repository" )
-    public Optional<String> localRepository;
+    Optional<String> localRepository();
 }
