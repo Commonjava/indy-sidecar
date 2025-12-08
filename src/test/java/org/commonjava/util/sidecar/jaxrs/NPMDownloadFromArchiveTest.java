@@ -23,8 +23,8 @@ import org.commonjava.util.sidecar.jaxrs.mock.MockTestProfile;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
-import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static javax.ws.rs.core.Response.Status.OK;
+import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
+import static jakarta.ws.rs.core.Response.Status.OK;
 
 @QuarkusTest
 @TestProfile( MockTestProfile.class )

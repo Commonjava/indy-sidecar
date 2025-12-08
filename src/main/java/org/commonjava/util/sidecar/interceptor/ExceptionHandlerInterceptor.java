@@ -18,10 +18,10 @@ package org.commonjava.util.sidecar.interceptor;
 import io.smallrye.mutiny.Uni;
 import org.commonjava.util.sidecar.exception.ServiceNotFoundException;
 
-import javax.interceptor.AroundInvoke;
-import javax.interceptor.Interceptor;
-import javax.interceptor.InvocationContext;
-import javax.ws.rs.core.Response;
+import jakarta.interceptor.AroundInvoke;
+import jakarta.interceptor.Interceptor;
+import jakarta.interceptor.InvocationContext;
+import jakarta.ws.rs.core.Response;
 
 @Interceptor
 @ExceptionHandler

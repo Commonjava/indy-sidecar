@@ -19,8 +19,8 @@ import org.commonjava.util.sidecar.config.SidecarConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.io.File;
 import java.util.Optional;
 
@@ -42,7 +42,7 @@ public class ArchiveRetrieveService
 
     public Optional<File> getLocally( final String path )
     {
-        File download = new File( sidecarConfig.localRepository.orElse( DEFAULT_REPO_PATH ) + File.separator + path );
+        File download = new File( sidecarConfig.localRepository().orElse( DEFAULT_REPO_PATH ) + File.separator + path );
         if ( !download.exists() )
         {
             return Optional.empty();

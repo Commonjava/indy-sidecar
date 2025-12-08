@@ -18,9 +18,9 @@ package org.commonjava.util.sidecar.jaxrs.mock;
 import org.apache.commons.io.FileUtils;
 import org.commonjava.util.sidecar.services.ArchiveRetrieveService;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Alternative;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Alternative;
 import java.io.File;
 import java.io.IOException;
 

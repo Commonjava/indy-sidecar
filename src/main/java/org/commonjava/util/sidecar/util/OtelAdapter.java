@@ -24,8 +24,8 @@ import io.opentelemetry.context.propagation.TextMapSetter;
 import okhttp3.Request;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class OtelAdapter
