@@ -39,7 +39,7 @@
     <projectEmail>https://github.com/Commonjava/indy-sidecar</projectEmail>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <surefire-plugin.version>3.0.0</surefire-plugin.version>
+    <surefire-plugin.version>3.5.5</surefire-plugin.version>
 
     <httpTestserverVersion>2.3.3</httpTestserverVersion>
   </properties>
